@@ -34,11 +34,33 @@ module.exports = async function handler(req, res) {
   const stylePrompt = stylePrompts[style] || stylePrompts.Modern;
   const palettePrompt = palettePrompts[palette] || '';
   const roomPrompt = roomType ? roomType.toLowerCase() : 'kitchen';
-
-  const fullPrompt = `A beautifully redesigned ${roomPrompt} in ${stylePrompt} style, ${palettePrompt}, HWH Designs premium cabinetry, photorealistic interior design photography, professional architectural photo, bright natural lighting, high detail`;
-  const negativePrompt = 'cartoon, sketch, blurry, low quality, distorted, watermark, text, people, ugly, unrealistic';
+  const fullPrompt = `A beautifully redesigned ${roomPrompt}, ${stylePrompt}, ${palettePrompt}, HWH Designs premium cabinetry, photorealistic interior design photography, professional architectural photo, bright natural lighting`;
+  const negativePrompt = 'cartoon, sketch, blurry, low quality, distorted, watermark, text, people';
 
   try {
+    // Step 1: Upload image to Replicate's file storage to get a URL
+    const imageBuffer = Buffer.from(imageBase64, 'base64');
+    
+    const uploadResponse = await fetch('https://api.replicate.com/v1/files', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${REPLICATE_API_TOKEN}`,
+        'Content-Type': mimeType || 'image/jpeg'
+      },
+      body: imageBuffer
+    });
+
+    const uploadData = await uploadResponse.json();
+    console.log('Upload response:', uploadResponse.status, uploadData.id, uploadData.urls);
+
+    if (!uploadResponse.ok || !uploadData.urls?.get) {
+      console.error('Upload failed:', JSON.stringify(uploadData));
+      return res.status(500).json({ error: 'Failed to upload image: ' + (uploadData.detail || 'unknown error') });
+    }
+
+    const imageUrl = uploadData.urls.get;
+
+    // Step 2: Start the prediction with the hosted URL
     const startResponse = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
@@ -46,10 +68,9 @@ module.exports = async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        // adirik/interior-design — purpose-built interior redesign model
         version: 'adirik/interior-design:76604baddc85b1b4616e1c6475eca080da339c8875bd4996705440484a6eac38',
         input: {
-          image: `data:${mimeType};base64,${imageBase64}`,
+          image: imageUrl,
           prompt: fullPrompt,
           negative_prompt: negativePrompt,
           num_inference_steps: 30,
@@ -71,7 +92,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ predictionId: prediction.id, status: prediction.status });
 
   } catch (err) {
-    console.error('Render start error:', err.message);
+    console.error('Render error:', err.message);
     return res.status(500).json({ error: err.message });
   }
 };
