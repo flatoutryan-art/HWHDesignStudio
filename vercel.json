@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "functions": {
+    "api/render.js": { "maxDuration": 30 },
+    "api/render-status.js": { "maxDuration": 10 },
+    "api/design.js": { "maxDuration": 30 }
+  },
+  "rewrites": [
+    { "source": "/api/render-status", "destination": "/api/render-status" },
+    { "source": "/api/render", "destination": "/api/render" },
+    { "source": "/api/design", "destination": "/api/design" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
