@@ -9,6 +9,6 @@
     { "source": "/api/render-status", "destination": "/api/render-status" },
     { "source": "/api/render", "destination": "/api/render" },
     { "source": "/api/design", "destination": "/api/design" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!.*\\.).*)", "destination": "/index.html" }
   ]
 }
